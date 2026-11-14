@@ -197,6 +197,21 @@ class TestMainFunctions:
 
     @pytest.mark.asyncio
     @pytest.mark.httpx_mock(can_send_already_matched_responses=True)
+    async def test_max_quick_select(self, httpx_mock: HTTPXMock):
+        """Check MaxQuickSelect is read from Deviceinfo.xml and enforced."""
+        httpx_mock.add_callback(self.custom_matcher)
+        for receiver, expected in (("AVR-X4100W", 4), ("AVR-1912", None)):
+            self.testing_receiver = receiver
+            self.denon = denonavr.DenonAVR(FAKE_IP)
+            await self.denon.async_setup()
+            assert self.denon.max_quick_select == expected, receiver
+            with pytest.raises(denonavr.exceptions.AvrCommandError):
+                await self.denon.async_quick_select_mode(5)
+            with pytest.raises(denonavr.exceptions.AvrCommandError):
+                await self.denon.async_quick_select_memory(0)
+
+    @pytest.mark.asyncio
+    @pytest.mark.httpx_mock(can_send_already_matched_responses=True)
     async def test_input_func_switch(self, httpx_mock: HTTPXMock):
         """Switch through all input functions of all tested receivers."""
         httpx_mock.add_callback(self.custom_matcher)

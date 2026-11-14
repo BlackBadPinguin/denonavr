@@ -136,6 +136,9 @@ class DenonAVRDeviceInfo:
         validator=attr.validators.in_(VALID_ZONES), default=MAIN_ZONE, kw_only=True
     )
     zones: int = attr.ib(converter=attr.converters.optional(int), default=0)
+    max_quick_select: Optional[int] = attr.ib(
+        converter=attr.converters.optional(int), default=None
+    )
     friendly_name: Optional[str] = attr.ib(
         converter=attr.converters.optional(str), default=None
     )
@@ -539,6 +542,13 @@ class DenonAVRDeviceInfo:
                 device_zones = xml.find("./DeviceZones")
                 if device_zones is not None:
                     self.zones = device_zones.text
+
+                # First DeviceZoneCapabilities block is the main zone
+                max_quick_select = xml.find(
+                    "./DeviceZoneCapabilities/Operation/QuickSelect/MaxQuickSelect"
+                )
+                if max_quick_select is not None:
+                    self.max_quick_select = max_quick_select.text
 
                 is_avr_x = self._is_avr_x(xml)
                 if is_avr_x:
@@ -1382,14 +1392,22 @@ class DenonAVRDeviceInfo:
         else:
             await self.async_trigger_on(trigger)
 
+    def _validate_quick_select_number(self, quick_select_number: int) -> None:
+        """Raise if the quick select number is not supported by the receiver."""
+        max_number = self.max_quick_select or 4
+        if quick_select_number not in range(1, max_number + 1):
+            raise AvrCommandError(
+                f"Quick select number must be between 1 and {max_number}"
+            )
+
     async def async_quick_select_mode(self, quick_select_number: int) -> None:
         """
         Set quick select mode on receiver.
 
-        :param quick_select_number: Quick select number to set. Valid values are 1-5.
+        :param quick_select_number: Quick select number to set. Valid values are
+            1 to max_quick_select (4 if the receiver does not report it).
         """
-        if quick_select_number not in range(1, 5):
-            raise AvrCommandError("Quick select number must be between 1 and 5")
+        self._validate_quick_select_number(quick_select_number)
 
         if self.telnet_available:
             if self.is_denon:
@@ -1410,10 +1428,10 @@ class DenonAVRDeviceInfo:
         """
         Set quick select memory on receiver.
 
-        :param quick_select_number: Quick select number to set. Valid values are 1-5.
+        :param quick_select_number: Quick select number to set. Valid values are
+            1 to max_quick_select (4 if the receiver does not report it).
         """
-        if quick_select_number not in range(1, 5):
-            raise AvrCommandError("Quick select number must be between 1 and 5")
+        self._validate_quick_select_number(quick_select_number)
 
         if self.telnet_available:
             if self.is_denon:

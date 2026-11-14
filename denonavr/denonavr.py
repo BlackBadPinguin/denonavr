@@ -335,6 +335,11 @@ class DenonAVR(DenonAVRFoundation):
         return self._device.model_name
 
     @property
+    def max_quick_select(self) -> Optional[int]:
+        """Return the number of quick select slots reported by the receiver."""
+        return self._device.max_quick_select
+
+    @property
     def serial_number(self) -> Optional[str]:
         """Return the serial number of the device as string."""
         return self._device.serial_number
@@ -1269,7 +1274,8 @@ class DenonAVR(DenonAVRFoundation):
         """
         Set quick select mode on receiver.
 
-        :param quick_select_number: Quick select number to set. Valid values are 1-5.
+        :param quick_select_number: Quick select number to set. Valid values are
+            1 to max_quick_select (4 if the receiver does not report it).
         """
         await self._device.async_quick_select_mode(quick_select_number)
 
@@ -1277,7 +1283,8 @@ class DenonAVR(DenonAVRFoundation):
         """
         Set quick select memory on receiver.
 
-        :param quick_select_number: Quick select number to set. Valid values are 1-5.
+        :param quick_select_number: Quick select number to set. Valid values are
+            1 to max_quick_select (4 if the receiver does not report it).
         """
         await self._device.async_quick_select_memory(quick_select_number)
 
